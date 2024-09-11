@@ -46,10 +46,7 @@ public class SmsReceiver extends BroadcastReceiver {
 
                 boolean isSmsMonitored = _monitoredPhoneNumbers.contains(originatingAddress);
 
-                String smsLogMessage = "Received SMS from" +
-                        (isSmsMonitored
-                        ? " monitoredAddress: "
-                        : ": ");
+                String smsLogMessage = "Received SMS from" + (isSmsMonitored ? " monitoredAddress: " : ": ");
 
                 Log.d(TAG, smsLogMessage + originatingAddress + ", Message: " + messageBody);
             }
