@@ -11,7 +11,11 @@ import androidx.annotation.NonNull;
 import java.util.HashSet;
 import java.util.Objects;
 
+import okhttp3.OkHttpClient;
+
 public class SmsReceiver extends BroadcastReceiver {
+
+    private  final OkHttpClient _httpClient = new OkHttpClient();
 
     // Список номеров телефона с которых прослушиваем получаем SMS
     private final HashSet<String> _monitoredPhoneNumbers = new HashSet<>();
@@ -48,5 +52,10 @@ public class SmsReceiver extends BroadcastReceiver {
                 Log.d(TAG, smsLogMessage + originatingAddress + ", Message: " + messageBody);
             }
         }
+    }
+
+    // Получаем идентификатор бота для отправки сообщений
+    private String getChatId() {
+        return "";
     }
 }
