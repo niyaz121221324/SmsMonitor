@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun registerSmsReceiver(monitoredPhoneNumbers: String) {
-        smsReceiver = SmsReceiver(monitoredPhoneNumbers)
+        smsReceiver = SmsReceiver(monitoredPhoneNumbers, this)
 
         // Создаём новый IntentFilter для SMS_RECEIVED
         val filter = IntentFilter(Telephony.Sms.Intents.SMS_RECEIVED_ACTION)

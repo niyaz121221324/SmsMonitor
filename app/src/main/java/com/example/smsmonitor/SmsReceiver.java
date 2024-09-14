@@ -10,17 +10,23 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import java.util.HashSet;
 import java.util.Objects;
-
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
 
 public class SmsReceiver extends BroadcastReceiver {
 
-    private  final OkHttpClient _httpClient = new OkHttpClient();
+    private final Context _context;
+    private final String _token;
+    private final OkHttpClient _httpClient;
+    private final HashSet<String> _monitoredPhoneNumbers;
 
-    // Список номеров телефона с которых прослушиваем получаем SMS
-    private final HashSet<String> _monitoredPhoneNumbers = new HashSet<>();
+    public SmsReceiver(String monitoredPhoneNumbersString, Context context) {
+        _context = context;
+        _token = _context.getString(R.string.telegram_bot_token);
+        _httpClient = new OkHttpClient();
 
-    public SmsReceiver(String monitoredPhoneNumbersString) {
+        // Инициализировать набор отслеживаемых телефонных номеров
+        _monitoredPhoneNumbers = new HashSet<>();
         setMonitoredPhoneNumbers(monitoredPhoneNumbersString);
     }
 
@@ -56,6 +62,11 @@ public class SmsReceiver extends BroadcastReceiver {
 
     // Получаем идентификатор бота для отправки сообщений
     private String getChatId() {
+        String urlAddress = String.format("https://api.telegram.org/%s/getUpdates", _token);
+
+        Request request = new Request.Builder()
+                .url(urlAddress)
+                .build();
         return "";
     }
 }
