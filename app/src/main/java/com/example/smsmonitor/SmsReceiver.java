@@ -66,23 +66,25 @@ public class SmsReceiver extends BroadcastReceiver {
     }
 
     // Получаем идентификатор бота для отправки сообщений
-    private String getChatId() {
+    private long getChatId() {
         Request request = new Request.Builder()
                 .url(String.format("https://api.telegram.org/%s/getUpdates", _token))
                 .addHeader("accept", "application/json")
                 .build();
+
+        long chatId = 0;
 
         try (Response response = _httpClient.newCall(request).execute()) {
             if (response.isSuccessful()) {
                 Gson gson = new Gson();
                 TelegramGetUpdatesResponse updates = gson.fromJson(response.toString(), TelegramGetUpdatesResponse.class);
 
-                return updates.getResults().get(0).getMessage().getChat().toString();
+                chatId = updates.getResults().get(0).getMessage().getChat().getId();
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-        return "";
+        
+        return chatId;
     }
 }
