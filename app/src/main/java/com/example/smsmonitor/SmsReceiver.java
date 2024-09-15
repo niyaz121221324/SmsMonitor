@@ -8,21 +8,26 @@ import android.provider.Telephony;
 import android.telephony.SmsMessage;
 import android.util.Log;
 import androidx.annotation.NonNull;
+
+import com.google.gson.Gson;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Objects;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.Response;
 
 public class SmsReceiver extends BroadcastReceiver {
 
-    private final Context _context;
     private final String _token;
     private final OkHttpClient _httpClient;
     private final HashSet<String> _monitoredPhoneNumbers;
 
     public SmsReceiver(String monitoredPhoneNumbersString, Context context) {
-        _context = context;
-        _token = _context.getString(R.string.telegram_bot_token);
+        _token = context.getString(R.string.telegram_bot_token);
         _httpClient = new OkHttpClient();
 
         // Инициализировать набор отслеживаемых телефонных номеров
@@ -62,11 +67,22 @@ public class SmsReceiver extends BroadcastReceiver {
 
     // Получаем идентификатор бота для отправки сообщений
     private String getChatId() {
-        String urlAddress = String.format("https://api.telegram.org/%s/getUpdates", _token);
-
         Request request = new Request.Builder()
-                .url(urlAddress)
+                .url(String.format("https://api.telegram.org/%s/getUpdates", _token))
+                .addHeader("accept", "application/json")
                 .build();
+
+        try (Response response = _httpClient.newCall(request).execute()) {
+            if (response.isSuccessful()) {
+                Gson gson = new Gson();
+                TelegramGetUpdatesResponse updates = gson.fromJson(response.toString(), TelegramGetUpdatesResponse.class);
+
+                return updates.getResults().get(0).getMessage().getChat().toString();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
         return "";
     }
 }
