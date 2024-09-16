@@ -49,14 +49,16 @@ public class SmsReceiver extends BroadcastReceiver {
 
         if (smsArray != null) {
             for (SmsMessage smsMessage : smsArray) {
-                String originatingAddress = smsMessage.getDisplayOriginatingAddress();
-                String messageBody = smsMessage.getMessageBody();
+                SmsContent smsContent = new SmsContent(
+                        smsMessage.getMessageBody(),
+                        smsMessage.getDisplayOriginatingAddress()
+                );
 
-                boolean isSmsMonitored = _monitoredPhoneNumbers.contains(originatingAddress);
+                boolean isSmsMonitored = _monitoredPhoneNumbers.contains(smsContent.getOriginatedAddress());
 
                 String smsLogMessage = "Received SMS from" + (isSmsMonitored ? " monitoredAddress: " : ": ");
 
-                Log.d(TAG, smsLogMessage + originatingAddress + ", Message: " + messageBody);
+                Log.d(TAG, smsLogMessage + smsContent.getOriginatedAddress() + ", Message: " + smsContent.getMessageBody());
             }
         }
     }
@@ -68,19 +70,20 @@ public class SmsReceiver extends BroadcastReceiver {
                 .addHeader("accept", "application/json")
                 .build();
 
-        long chatId = 0;
-
         try (Response response = _httpClient.newCall(request).execute()) {
             if (response.isSuccessful()) {
                 Gson gson = new Gson();
                 TelegramGetUpdatesResponse updates = gson.fromJson(response.toString(), TelegramGetUpdatesResponse.class);
 
-                chatId = updates.getResults().get(0).getMessage().getChat().getId();
+                return updates.getResults().get(0).getMessage().getChat().getId();
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         
-        return chatId;
+        return 0;
+    }
+
+    private void sendMessage() {
     }
 }
