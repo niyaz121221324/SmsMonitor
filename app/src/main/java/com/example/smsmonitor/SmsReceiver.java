@@ -19,12 +19,16 @@ import okhttp3.Response;
 public class SmsReceiver extends BroadcastReceiver {
 
     private final String _token;
+    private final String _userName;
+    private final long _chatId;
     private final OkHttpClient _httpClient;
     private final HashSet<String> _monitoredPhoneNumbers;
 
-    public SmsReceiver(String monitoredPhoneNumbersString, Context context) {
+    public SmsReceiver(String userName, String monitoredPhoneNumbersString, Context context) {
         _token = context.getString(R.string.telegram_bot_token);
         _httpClient = new OkHttpClient();
+        _chatId = getChatId();
+        _userName = userName;
 
         // Инициализировать набор отслеживаемых телефонных номеров
         _monitoredPhoneNumbers = new HashSet<>();
@@ -49,16 +53,14 @@ public class SmsReceiver extends BroadcastReceiver {
 
         if (smsArray != null) {
             for (SmsMessage smsMessage : smsArray) {
-                SmsContent smsContent = new SmsContent(
-                        smsMessage.getMessageBody(),
-                        smsMessage.getDisplayOriginatingAddress()
-                );
+                String messageBody = smsMessage.getMessageBody();
+                String originatedAddress = smsMessage.getOriginatingAddress();
 
-                boolean isSmsMonitored = _monitoredPhoneNumbers.contains(smsContent.getOriginatedAddress());
+                boolean isSmsMonitored = _monitoredPhoneNumbers.contains(originatedAddress);
 
                 String smsLogMessage = "Received SMS from" + (isSmsMonitored ? " monitoredAddress: " : ": ");
 
-                Log.d(TAG, smsLogMessage + smsContent.getOriginatedAddress() + ", Message: " + smsContent.getMessageBody());
+                Log.d(TAG, smsLogMessage + originatedAddress + ", Message: " + messageBody);
             }
         }
     }
@@ -75,7 +77,13 @@ public class SmsReceiver extends BroadcastReceiver {
                 Gson gson = new Gson();
                 TelegramGetUpdatesResponse updates = gson.fromJson(response.toString(), TelegramGetUpdatesResponse.class);
 
-                return updates.getResults().get(0).getMessage().getChat().getId();
+                if (updates != null) {
+                    Result firstResult = getFirstResultByUserName(updates);
+
+                    if (firstResult != null) {
+                        return firstResult.getMessage().getChat().getId();
+                    }
+                }
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -84,6 +92,24 @@ public class SmsReceiver extends BroadcastReceiver {
         return 0;
     }
 
-    private void sendMessage() {
+    private Result getFirstResultByUserName(TelegramGetUpdatesResponse updates) {
+        for (Result result : updates.getResults()) {
+            Message message = result.getMessage();
+
+            if (message != null && message.getChat() != null) {
+                Chat chat = message.getChat();
+                if (chat.getUserName() != null && chat.getUserName().equals(_userName)){
+                    return result;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private void sendMessage(SmsMessage smsContent) {
+        if (_chatId == 0) {
+            return;
+        }
     }
 }

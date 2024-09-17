@@ -46,8 +46,8 @@ class MainActivity : ComponentActivity() {
                 PackageManager.PERMISSION_GRANTED
     }
 
-    private fun registerSmsReceiver(monitoredPhoneNumbers: String) {
-        smsReceiver = SmsReceiver(monitoredPhoneNumbers, this)
+    private fun registerSmsReceiver(monitoredPhoneNumbers: String, userNameText: String) {
+        smsReceiver = SmsReceiver(userNameText, monitoredPhoneNumbers, this)
 
         // Создаём новый IntentFilter для SMS_RECEIVED
         val filter = IntentFilter(Telephony.Sms.Intents.SMS_RECEIVED_ACTION)
@@ -64,15 +64,21 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun SmsMonitorApp() {
-        var text by remember { mutableStateOf("+9989") } // Состояние для хранения текста ввода
+        var phoneNumbersText by remember { mutableStateOf("+9989") } // Состояние для хранения текста ввода
+        var userNameText by remember { mutableStateOf("") }
 
         Column {
             TextField(
-                value = text,
-                onValueChange = { text = it },
+                value = phoneNumbersText,
+                onValueChange = { phoneNumbersText = it },
                 label = { Text("Введите номера телефонов, с которых будем прослушивать SMS") },
             )
-            Button( onClick = { onClick(text) } ) {
+            TextField(
+                value = userNameText,
+                onValueChange = { userNameText = it },
+                label = { Text("Введите telegram userName на который будут отправлятся SMS") }
+            )
+            Button( onClick = { onClick(phoneNumbersText, userNameText) } ) {
                 Text("Зарегистрировать Receiver")
             }
             Button( onClick = { onClick() } ) {
@@ -87,9 +93,9 @@ class MainActivity : ComponentActivity() {
     }
 
     // Метод для регистрации SMS прослушивателя
-    private fun onClick(text: String) {
+    private fun onClick(phoneNumbersText: String, userNameText: String) {
         if (isReceiveSmsPermissionGranted()) {
-            registerSmsReceiver(text)
+            registerSmsReceiver(userNameText, phoneNumbersText)
         }
     }
 
