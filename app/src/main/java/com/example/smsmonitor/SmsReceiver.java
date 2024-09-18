@@ -10,6 +10,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import com.google.gson.Gson;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.HashSet;
 import java.util.Objects;
 import okhttp3.OkHttpClient;
@@ -27,8 +29,8 @@ public class SmsReceiver extends BroadcastReceiver {
     public SmsReceiver(String userName, String monitoredPhoneNumbersString, Context context) {
         _token = context.getString(R.string.telegram_bot_token);
         _httpClient = new OkHttpClient();
+        _userName = userName.trim();
         _chatId = getChatId();
-        _userName = userName;
 
         // Инициализировать набор отслеживаемых телефонных номеров
         _monitoredPhoneNumbers = new HashSet<>();
@@ -68,8 +70,7 @@ public class SmsReceiver extends BroadcastReceiver {
     // Получаем идентификатор бота для отправки сообщений
     private long getChatId() {
         Request request = new Request.Builder()
-                .url(String.format("https://api.telegram.org/%s/getUpdates", _token))
-                .addHeader("accept", "application/json")
+                .url(String.format("https://api.telegram.org/bot:%s/getUpdates", _token))
                 .build();
 
         try (Response response = _httpClient.newCall(request).execute()) {
@@ -107,9 +108,39 @@ public class SmsReceiver extends BroadcastReceiver {
         return null;
     }
 
-    private void sendMessage(SmsMessage smsContent) {
+    private void sendMessage(SmsMessage smsMessage) {
         if (_chatId == 0) {
             return;
+        }
+
+        String message = getMessage(smsMessage);
+        String urlAddress = String.format("https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s",
+                _token,
+                String.valueOf(_chatId),
+                urlEncode(message));
+
+        Request request = new Request.Builder()
+                .url(urlAddress)
+                .build();
+    }
+
+    private String getMessage(@NonNull SmsMessage smsMessage) {
+        String message = "";
+
+        if (smsMessage.getOriginatingAddress() != null && smsMessage.getMessageBody() != null) {
+            message = String.format("У вас сообщение от телефона : %s /n %s",
+                    smsMessage.getOriginatingAddress(),
+                    smsMessage.getMessageBody());
+        }
+
+        return urlEncode(message);
+    }
+
+    private String urlEncode(String text){
+        try {
+            return URLEncoder.encode(text, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            return "";
         }
     }
 }

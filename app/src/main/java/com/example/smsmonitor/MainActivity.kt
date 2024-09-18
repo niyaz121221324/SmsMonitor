@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
                 PackageManager.PERMISSION_GRANTED
     }
 
-    private fun registerSmsReceiver(monitoredPhoneNumbers: String, userNameText: String) {
+    private fun registerSmsReceiver(userNameText: String, monitoredPhoneNumbers: String) {
         smsReceiver = SmsReceiver(userNameText, monitoredPhoneNumbers, this)
 
         // Создаём новый IntentFilter для SMS_RECEIVED
@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
                 onValueChange = { userNameText = it },
                 label = { Text("Введите telegram userName на который будут отправлятся SMS") }
             )
-            Button( onClick = { onClick(phoneNumbersText, userNameText) } ) {
+            Button( onClick = { onClick(userNameText, phoneNumbersText) } ) {
                 Text("Зарегистрировать Receiver")
             }
             Button( onClick = { onClick() } ) {
@@ -93,7 +93,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // Метод для регистрации SMS прослушивателя
-    private fun onClick(phoneNumbersText: String, userNameText: String) {
+    private fun onClick(userNameText: String, phoneNumbersText: String) {
         if (isReceiveSmsPermissionGranted()) {
             registerSmsReceiver(userNameText, phoneNumbersText)
         }
