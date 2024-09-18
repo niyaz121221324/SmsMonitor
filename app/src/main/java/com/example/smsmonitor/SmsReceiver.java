@@ -70,13 +70,15 @@ public class SmsReceiver extends BroadcastReceiver {
     // Получаем идентификатор бота для отправки сообщений
     private long getChatId() {
         Request request = new Request.Builder()
-                .url(String.format("https://api.telegram.org/bot:%s/getUpdates", _token))
+                .url(String.format("https://api.telegram.org/bot%s/getUpdates", _token))
                 .build();
 
         try (Response response = _httpClient.newCall(request).execute()) {
-            if (response.isSuccessful()) {
+            if (response.isSuccessful() && response.body() != null) {
+                String responseBody = response.body().string();
+
                 Gson gson = new Gson();
-                TelegramGetUpdatesResponse updates = gson.fromJson(response.toString(), TelegramGetUpdatesResponse.class);
+                TelegramGetUpdatesResponse updates = gson.fromJson(responseBody, TelegramGetUpdatesResponse.class);
 
                 if (updates != null) {
                     Result firstResult = getFirstResultByUserName(updates);
@@ -116,7 +118,7 @@ public class SmsReceiver extends BroadcastReceiver {
         String message = getMessage(smsMessage);
         String urlAddress = String.format("https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s",
                 _token,
-                String.valueOf(_chatId),
+                _chatId,
                 urlEncode(message));
 
         Request request = new Request.Builder()
