@@ -1,23 +1,15 @@
 package com.example.smsmonitor;
 
-import static android.content.ContentValues.TAG;
-import static org.chromium.base.ThreadUtils.runOnUiThread;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.provider.Telephony;
 import android.telephony.SmsMessage;
-import android.util.Log;
 import androidx.annotation.NonNull;
 import com.google.gson.Gson;
-
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.HashSet;
 import java.util.Objects;
-
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.HttpUrl;
