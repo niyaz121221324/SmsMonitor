@@ -3,22 +3,22 @@ package com.example.smsmonitor;
 import java.util.List;
 
 public class TelegramGetUpdatesResponse {
-    private boolean _ok;
-    private List<Result> _results;
+    private boolean ok;
+    private List<Result> result;
 
-    public boolean getOk() {
-        return _ok;
+    public boolean isOk() {
+        return ok;
     }
 
     public void setOk(boolean ok) {
-        _ok = ok;
+        this.ok = ok;
     }
 
-    public List<Result> getResults() {
-        return  _results;
+    public List<Result> getResult() {
+        return result;
     }
 
-    public void setResults (List<Result> results) {
-        _results = results;
+    public void setResult(List<Result> result) {
+        this.result = result;
     }
 }

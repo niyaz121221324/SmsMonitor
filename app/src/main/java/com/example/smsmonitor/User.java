@@ -2,22 +2,32 @@ package com.example.smsmonitor;
 
 import com.google.gson.annotations.SerializedName;
 
-public class Chat {
+public class User {
     private long id;
+    @SerializedName("is_bot")
+    private boolean isBot;
     @SerializedName("first_name")
     private String firstName;
     @SerializedName("last_name")
     private String lastName;
     private String username;
-    private String type;
+    @SerializedName("language_code")
+    private String languageCode;
 
-    // Getters and Setters
     public long getId() {
         return id;
     }
 
     public void setId(long id) {
         this.id = id;
+    }
+
+    public boolean isBot() {
+        return isBot;
+    }
+
+    public void setBot(boolean bot) {
+        isBot = bot;
     }
 
     public String getFirstName() {
@@ -44,11 +54,11 @@ public class Chat {
         this.username = username;
     }
 
-    public String getType() {
-        return type;
+    public String getLanguageCode() {
+        return languageCode;
     }
 
-    public void setType(String type) {
-        this.type = type;
+    public void setLanguageCode(String languageCode) {
+        this.languageCode = languageCode;
     }
 }

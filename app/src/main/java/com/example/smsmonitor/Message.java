@@ -1,49 +1,64 @@
 package com.example.smsmonitor;
 
-public class Message {
-    private long _messageId;
-    private From _from;
-    private Chat _chat;
-    private long _date;
-    private String _text;
+import android.content.Entity;
+import com.google.gson.annotations.SerializedName;
+import java.util.List;
 
+public class Message {
+    @SerializedName("message_id")
+    private long messageId;
+    private User from;
+    private Chat chat;
+    private long date;
+    private String text;
+    private List<Entity> entities;
+
+    // Getters and Setters
     public long getMessageId() {
-        return _messageId;
+        return messageId;
     }
 
     public void setMessageId(long messageId) {
-        _messageId = messageId;
+        this.messageId = messageId;
     }
 
-    public From getFrom() {
-        return _from;
+    public User getFrom() {
+        return from;
     }
 
-    public void setFrom(From from) {
-        _from = from;
+    public void setFrom(User from) {
+        this.from = from;
     }
 
     public Chat getChat() {
-        return _chat;
+        return chat;
     }
 
     public void setChat(Chat chat) {
-        _chat = chat;
+        this.chat = chat;
     }
 
     public long getDate() {
-        return _date;
+        return date;
     }
 
     public void setDate(long date) {
-        _date = date;
+        this.date = date;
     }
 
     public String getText() {
-        return _text;
+        return text;
     }
 
     public void setText(String text) {
-        _text = text;
+        this.text = text;
+    }
+
+    public List<Entity> getEntities() {
+        return entities;
+    }
+
+    public void setEntities(List<Entity> entities) {
+        this.entities = entities;
     }
 }

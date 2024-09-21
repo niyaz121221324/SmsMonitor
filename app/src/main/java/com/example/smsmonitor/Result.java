@@ -1,22 +1,36 @@
 package com.example.smsmonitor;
 
-public class Result {
-    private long _updateId;
-    private Message _message;
+import com.google.gson.annotations.SerializedName;
 
+public class Result {
+    @SerializedName("update_id")
+    private long updateId;
+    private Message message;
+    @SerializedName("my_chat_member")
+    private ChatMember myChatMember;
+
+    // Getters and Setters
     public long getUpdateId() {
-        return  _updateId;
+        return updateId;
     }
 
     public void setUpdateId(long updateId) {
-        _updateId = updateId;
+        this.updateId = updateId;
     }
 
     public Message getMessage() {
-        return _message;
+        return message;
     }
 
     public void setMessage(Message message) {
-        _message = message;
+        this.message = message;
+    }
+
+    public ChatMember getMyChatMember() {
+        return myChatMember;
+    }
+
+    public void setMyChatMember(ChatMember myChatMember) {
+        this.myChatMember = myChatMember;
     }
 }

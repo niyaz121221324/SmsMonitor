@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.okhttp3.okhttp)
     implementation(libs.gson)
     implementation(libs.androidx.annotation)
+    implementation(libs.cronet.embedded)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

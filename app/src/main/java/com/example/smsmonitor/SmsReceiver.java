@@ -1,6 +1,8 @@
 package com.example.smsmonitor;
 
 import static android.content.ContentValues.TAG;
+import static org.chromium.base.ThreadUtils.runOnUiThread;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -9,11 +11,16 @@ import android.telephony.SmsMessage;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import com.google.gson.Gson;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashSet;
 import java.util.Objects;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -22,15 +29,22 @@ public class SmsReceiver extends BroadcastReceiver {
 
     private final String _token;
     private final String _userName;
-    private final long _chatId;
     private final OkHttpClient _httpClient;
     private final HashSet<String> _monitoredPhoneNumbers;
+
+    // Идентификатор чата на который
+    private long _chatId;
+
+    // Количество сообщений получаемых с запроса getUpdates
+    private static final int OFFSET = 5;
 
     public SmsReceiver(String userName, String monitoredPhoneNumbersString, Context context) {
         _token = context.getString(R.string.telegram_bot_token);
         _httpClient = new OkHttpClient();
         _userName = userName.trim();
-        _chatId = getChatId();
+
+        // Получаем chat_id для отправки сообщений
+        initializeChatId();
 
         // Инициализировать набор отслеживаемых телефонных номеров
         _monitoredPhoneNumbers = new HashSet<>();
@@ -54,54 +68,67 @@ public class SmsReceiver extends BroadcastReceiver {
         SmsMessage[] smsArray = Telephony.Sms.Intents.getMessagesFromIntent(intent);
 
         if (smsArray != null) {
-            for (SmsMessage smsMessage : smsArray) {
-                String messageBody = smsMessage.getMessageBody();
-                String originatedAddress = smsMessage.getOriginatingAddress();
-
-                boolean isSmsMonitored = _monitoredPhoneNumbers.contains(originatedAddress);
-
-                String smsLogMessage = "Received SMS from" + (isSmsMonitored ? " monitoredAddress: " : ": ");
-
-                Log.d(TAG, smsLogMessage + originatedAddress + ", Message: " + messageBody);
+            if (_chatId > 0) {
+                for (SmsMessage smsMessage : smsArray) {
+                    if (_monitoredPhoneNumbers.contains(smsMessage.getOriginatingAddress())) {
+                        sendMessage(smsMessage);
+                    }
+                }
+            } else {
+                initializeChatId();
             }
         }
     }
 
     // Получаем идентификатор бота для отправки сообщений
-    private long getChatId() {
+    private void initializeChatId() {
         Request request = new Request.Builder()
-                .url(String.format("https://api.telegram.org/bot%s/getUpdates", _token))
+                .url(String.format("https://api.telegram.org/bot%s/getUpdates?offset=%s", _token, OFFSET))
                 .build();
 
-        try (Response response = _httpClient.newCall(request).execute()) {
-            if (response.isSuccessful() && response.body() != null) {
-                String responseBody = response.body().string();
+        _httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                throw new RuntimeException(e);
+            }
 
-                Gson gson = new Gson();
-                TelegramGetUpdatesResponse updates = gson.fromJson(responseBody, TelegramGetUpdatesResponse.class);
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                setChatIdValue(response);
+            }
+        });
+    }
 
-                if (updates != null) {
+    private void setChatIdValue(@NonNull Response response) throws IOException {
+        if (response.isSuccessful() && response.body() != null) {
+            String responseBody = response.body().string();
+
+            Gson gson = new Gson();
+            TelegramGetUpdatesResponse updates = gson.fromJson(responseBody, TelegramGetUpdatesResponse.class);
+
+            if (updates != null) {
+                if (updates.getResult() != null) {
                     Result firstResult = getFirstResultByUserName(updates);
 
-                    if (firstResult != null) {
-                        return firstResult.getMessage().getChat().getId();
+                    if (firstResult != null && firstResult.getMessage() != null) {
+                        Chat chat = firstResult.getMessage().getChat();
+
+                        if (chat != null) {
+                            _chatId = chat.getId();
+                        }
                     }
                 }
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
-        
-        return 0;
     }
 
     private Result getFirstResultByUserName(TelegramGetUpdatesResponse updates) {
-        for (Result result : updates.getResults()) {
+        for (Result result : updates.getResult()) {
             Message message = result.getMessage();
 
             if (message != null && message.getChat() != null) {
                 Chat chat = message.getChat();
-                if (chat.getUserName() != null && chat.getUserName().equals(_userName)){
+                if (chat.getUsername() != null && chat.getUsername().equals(_userName)){
                     return result;
                 }
             }
@@ -116,26 +143,41 @@ public class SmsReceiver extends BroadcastReceiver {
         }
 
         String message = getMessage(smsMessage);
-        String urlAddress = String.format("https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s",
-                _token,
-                _chatId,
-                urlEncode(message));
+
+        HttpUrl.Builder urlBuilder = Objects.requireNonNull(HttpUrl.parse(String.format("https://api.telegram.org/bot%s/sendMessage", _token)))
+                .newBuilder()
+                .addQueryParameter("chat_id", String.valueOf(_chatId))
+                .addQueryParameter("text", message);
 
         Request request = new Request.Builder()
-                .url(urlAddress)
+                .url(urlBuilder.build().toString())
                 .build();
+
+        _httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (!response.isSuccessful()) {
+                    throw  new IOException();
+                }
+            }
+        });
     }
 
     private String getMessage(@NonNull SmsMessage smsMessage) {
         String message = "";
 
         if (smsMessage.getOriginatingAddress() != null && smsMessage.getMessageBody() != null) {
-            message = String.format("У вас сообщение от телефона : %s /n %s",
-                    smsMessage.getOriginatingAddress(),
-                    smsMessage.getMessageBody());
+            message = String.format("%s : От %s",
+                    smsMessage.getMessageBody(),
+                    smsMessage.getOriginatingAddress());
         }
 
-        return urlEncode(message);
+        return message;
     }
 
     private String urlEncode(String text){
