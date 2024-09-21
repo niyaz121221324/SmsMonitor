@@ -179,12 +179,4 @@ public class SmsReceiver extends BroadcastReceiver {
 
         return message;
     }
-
-    private String urlEncode(String text){
-        try {
-            return URLEncoder.encode(text, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            return "";
-        }
-    }
 }
