@@ -30,7 +30,7 @@ public class SmsReceiver extends BroadcastReceiver {
     // Количество сообщений получаемых с запроса getUpdates
     private static final int OFFSET = 5;
 
-    public SmsReceiver(String userName, String monitoredPhoneNumbersString, Context context) {
+    public SmsReceiver(@NonNull String userName, String monitoredPhoneNumbersString, @NonNull Context context) {
         _token = context.getString(R.string.telegram_bot_token);
         _httpClient = new OkHttpClient();
         _userName = userName.trim();
