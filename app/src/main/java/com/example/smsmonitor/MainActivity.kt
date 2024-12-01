@@ -4,6 +4,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Telephony
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -18,8 +19,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.microsoft.signalr.HubConnection
+import com.microsoft.signalr.HubConnectionBuilder
 
 class MainActivity : ComponentActivity() {
+    private lateinit var hubConnection: HubConnection
     private lateinit var smsReceiver: SmsReceiver
     private val requestCode = 1
 
@@ -47,6 +51,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun registerSmsReceiver(userNameText: String, monitoredPhoneNumbers: String) {
+        // Подключаемся к хабу для получения сообщений с сервера
+        connectHub(userNameText)
+
         smsReceiver = SmsReceiver(userNameText, monitoredPhoneNumbers, this)
 
         // Создаём новый IntentFilter для SMS_RECEIVED
@@ -56,9 +63,49 @@ class MainActivity : ComponentActivity() {
         registerReceiver(smsReceiver, filter)
     }
 
+    private fun connectHub(userNameText: String) {
+        val hubUrl = "https://glider-dear-hog.ngrok-free.app/notificationHub"
+
+        hubConnection = HubConnectionBuilder.create(hubUrl).build();
+
+        hubConnection
+            .on("ReceiveMessage", { message:SmsMessage ->
+                onMessageReceived(message)
+            },
+            SmsMessage::class.java,
+        )
+
+        hubConnection.start()
+            .doOnComplete {
+                Log.d("SignalR", "Подключилсь к hub")
+                // Вызовите метод RegisterUserAsync после подключения.
+                registerUser(userNameText)
+            }
+            .doOnError { error: Throwable? ->
+                Log.e("SignalR", "Error connecting to the hub", error)
+            }
+            .blockingAwait()
+    }
+
+    private fun onMessageReceived(message: SmsMessage) {
+        // TODO отправка SMS сообщений по указанному номеру и указанный текст
+    }
+
+    private fun registerUser(userName: String) {
+        hubConnection.invoke("RegisterUserAsync", userName)
+            .doOnComplete {
+                Log.d("SignalR", "Пользователь был успешно зарегистрирован")
+            }
+            .doOnError { error ->
+                Log.e("SignalR", "Ошибка вызова RegisterUserAsync", error)
+            }
+            .blockingAwait() // Ожидание завершения вызова
+    }
+
     private fun unregisterSmsReceiver() {
         if (::smsReceiver.isInitialized) {
             unregisterReceiver(smsReceiver)
+            hubConnection.stop()
         }
     }
 

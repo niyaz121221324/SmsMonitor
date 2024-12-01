@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.androidx.annotation)
     implementation(libs.cronet.embedded)
     implementation(libs.androidx.activity.ktx)
+    implementation(libs.signalr)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

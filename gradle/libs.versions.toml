@@ -37,6 +37,7 @@ androidx-annotation = { group = "androidx.annotation", name = "annotation", vers
 gson = { module = "com.google.code.gson:gson", version = "2.10.1" }
 cronet-embedded = { group = "org.chromium.net", name = "cronet-embedded", version.ref = "cronetEmbedded" }
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
+signalr = { module = "com.microsoft.signalr:signalr", version = "6.0.0" }
 
 [plugins]
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
