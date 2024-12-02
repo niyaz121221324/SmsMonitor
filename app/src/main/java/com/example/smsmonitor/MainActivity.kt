@@ -22,6 +22,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
+import com.microsoft.signalr.TransportEnum
 
 class MainActivity : ComponentActivity() {
     private lateinit var hubConnection: HubConnection
@@ -73,18 +74,14 @@ class MainActivity : ComponentActivity() {
     private fun connectHub(userNameText: String) {
         val hubUrl = "https://glider-dear-hog.ngrok-free.app/notificationHub"
 
-        hubConnection = HubConnectionBuilder.create(hubUrl).build();
+        hubConnection = HubConnectionBuilder.create(hubUrl)
+            .withTransport(TransportEnum.WEBSOCKETS) // Только WebSocket
+            .build()
 
-        hubConnection.start()
-            .doOnComplete {
-                Log.d("SignalR", "Подключилсь к hub")
-                // Вызовите метод RegisterUserAsync после подключения.
-                registerUser(userNameText)
-            }
-            .doOnError { error: Throwable? ->
-                Log.e("SignalR", "Error connecting to the hub", error)
-            }
-            .blockingAwait()
+        hubConnection.start().blockingAwait()
+
+        // Вызовите метод RegisterUserAsync после подключения.
+        hubConnection.send("RegisterUserAsync", userNameText)
 
         hubConnection
             .on("ReceiveMessage", { message:SmsMessage ->
@@ -100,17 +97,6 @@ class MainActivity : ComponentActivity() {
         } catch (e:Exception) {
             Log.d("Error", "Occurred", e)
         }
-    }
-
-    private fun registerUser(userName: String) {
-        hubConnection.invoke("RegisterUserAsync", userName)
-            .doOnComplete {
-                Log.d("SignalR", "Пользователь был успешно зарегистрирован")
-            }
-            .doOnError { error ->
-                Log.e("SignalR", "Ошибка вызова RegisterUserAsync", error)
-            }
-            .blockingAwait() // Ожидание завершения вызова
     }
 
     private fun unregisterSmsReceiver() {
