@@ -4,6 +4,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Telephony
+import android.telephony.SmsManager
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,20 +35,26 @@ class MainActivity : ComponentActivity() {
             SmsMonitorApp() // Устанавливаем контент с использованием Compose
         }
 
-        if (!isReceiveSmsPermissionGranted()) {
+        if (!isSmsPermissionGranted()) {
 
             // Запрашиваем доступ к SMS
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(android.Manifest.permission.RECEIVE_SMS),
+                arrayOf(android.Manifest.permission.RECEIVE_SMS, android.Manifest.permission.SEND_SMS),
                 requestCode
             )
         }
     }
 
-    private fun isReceiveSmsPermissionGranted() : Boolean {
-        return ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECEIVE_SMS) ==
-                PackageManager.PERMISSION_GRANTED
+    private fun isSmsPermissionGranted() : Boolean {
+        val requiredPermissions = arrayOf(
+            android.Manifest.permission.RECEIVE_SMS,
+            android.Manifest.permission.SEND_SMS
+        )
+
+        return requiredPermissions.all { permission ->
+            ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+        }
     }
 
     private fun registerSmsReceiver(userNameText: String, monitoredPhoneNumbers: String) {
@@ -68,13 +75,6 @@ class MainActivity : ComponentActivity() {
 
         hubConnection = HubConnectionBuilder.create(hubUrl).build();
 
-        hubConnection
-            .on("ReceiveMessage", { message:SmsMessage ->
-                onMessageReceived(message)
-            },
-            SmsMessage::class.java,
-        )
-
         hubConnection.start()
             .doOnComplete {
                 Log.d("SignalR", "Подключилсь к hub")
@@ -85,10 +85,21 @@ class MainActivity : ComponentActivity() {
                 Log.e("SignalR", "Error connecting to the hub", error)
             }
             .blockingAwait()
+
+        hubConnection
+            .on("ReceiveMessage", { message:SmsMessage ->
+                onMessageReceived(message)
+            }, SmsMessage::class.java)
     }
 
+    // Отправляет sms на указанный номер в объекте message
     private fun onMessageReceived(message: SmsMessage) {
-        // TODO отправка SMS сообщений по указанному номеру и указанный текст
+        try {
+            val smsManager:SmsManager = this.getSystemService(SmsManager::class.java)
+            smsManager.sendTextMessage(message.phoneNumber, null, message.messageContent, null, null)
+        } catch (e:Exception) {
+            Log.d("Error", "Occurred", e)
+        }
     }
 
     private fun registerUser(userName: String) {
@@ -141,7 +152,7 @@ class MainActivity : ComponentActivity() {
 
     // Метод для регистрации SMS прослушивателя
     private fun onClick(userNameText: String, phoneNumbersText: String) {
-        if (isReceiveSmsPermissionGranted()) {
+        if (isSmsPermissionGranted()) {
             registerSmsReceiver(userNameText, phoneNumbersText)
         }
     }
