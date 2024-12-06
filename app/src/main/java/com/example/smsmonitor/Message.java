@@ -1,64 +1,51 @@
 package com.example.smsmonitor;
 
-import android.content.Entity;
-import com.google.gson.annotations.SerializedName;
-import java.util.List;
+import android.telephony.SmsMessage;
 
 public class Message {
-    @SerializedName("message_id")
-    private long messageId;
-    private User from;
-    private Chat chat;
-    private long date;
-    private String text;
-    private List<Entity> entities;
 
-    // Getters and Setters
-    public long getMessageId() {
-        return messageId;
+    /**
+     * Номер телефона, на который будет отправлено сообщение.
+     */
+    private String phoneNumber = "";
+
+    /**
+     * Содержание сообщения.
+     */
+    private String messageContent = "";
+
+    public Message() {
     }
 
-    public void setMessageId(long messageId) {
-        this.messageId = messageId;
+    public Message(String phoneNumber, String messageContent) {
+        this.phoneNumber = phoneNumber;
+        this.messageContent = messageContent;
     }
 
-    public User getFrom() {
-        return from;
+    public String getPhoneNumber() {
+        return phoneNumber;
     }
 
-    public void setFrom(User from) {
-        this.from = from;
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 
-    public Chat getChat() {
-        return chat;
+    public String getMessageContent() {
+        return messageContent;
     }
 
-    public void setChat(Chat chat) {
-        this.chat = chat;
+    public void setMessageContent(String messageContent) {
+        this.messageContent = messageContent;
     }
 
-    public long getDate() {
-        return date;
-    }
+    public static Message from(SmsMessage smsMessage) {
+        if (smsMessage == null) {
+            throw new IllegalArgumentException("SmsMessage cannot be null");
+        }
 
-    public void setDate(long date) {
-        this.date = date;
-    }
+        String phoneNumber = smsMessage.getOriginatingAddress();
+        String messageContent = smsMessage.getMessageBody();
 
-    public String getText() {
-        return text;
-    }
-
-    public void setText(String text) {
-        this.text = text;
-    }
-
-    public List<Entity> getEntities() {
-        return entities;
-    }
-
-    public void setEntities(List<Entity> entities) {
-        this.entities = entities;
+        return new Message(phoneNumber, messageContent);
     }
 }

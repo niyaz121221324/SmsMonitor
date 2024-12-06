@@ -22,7 +22,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
-import com.microsoft.signalr.TransportEnum
 
 class MainActivity : ComponentActivity() {
     private lateinit var hubConnection: HubConnection
@@ -35,6 +34,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             SmsMonitorApp() // Устанавливаем контент с использованием Compose
         }
+
+        connectHub()
 
         if (!isSmsPermissionGranted()) {
 
@@ -59,38 +60,38 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun registerSmsReceiver(userNameText: String, monitoredPhoneNumbers: String) {
-        // Подключаемся к хабу для получения сообщений с сервера
-        connectHub(userNameText)
-
-        smsReceiver = SmsReceiver(userNameText, monitoredPhoneNumbers, this)
+        smsReceiver = SmsReceiver(userNameText, monitoredPhoneNumbers)
 
         // Создаём новый IntentFilter для SMS_RECEIVED
         val filter = IntentFilter(Telephony.Sms.Intents.SMS_RECEIVED_ACTION)
 
         // Зарегистрируйте приемник с фильтром
         registerReceiver(smsReceiver, filter)
+
+        // Подключаемся к хабу для получения сообщений с сервера
+        registerUserHub(userNameText)
     }
 
-    private fun connectHub(userNameText: String) {
+    private fun connectHub() {
         val hubUrl = "https://glider-dear-hog.ngrok-free.app/notificationHub"
 
-        hubConnection = HubConnectionBuilder.create(hubUrl)
-            .withTransport(TransportEnum.WEBSOCKETS) // Только WebSocket
-            .build()
+        hubConnection = HubConnectionBuilder.create(hubUrl).build()
 
-        hubConnection.start().blockingAwait()
+        hubConnection.start().blockingAwait();
+    }
 
+    private fun registerUserHub(userNameText: String) {
         // Вызовите метод RegisterUserAsync после подключения.
         hubConnection.send("RegisterUserAsync", userNameText)
 
         hubConnection
-            .on("ReceiveMessage", { message:SmsMessage ->
+            .on("ReceiveMessage", { message: Message ->
                 onMessageReceived(message)
-            }, SmsMessage::class.java)
+            }, Message::class.java)
     }
 
     // Отправляет sms на указанный номер в объекте message
-    private fun onMessageReceived(message: SmsMessage) {
+    private fun onMessageReceived(message: Message) {
         try {
             val smsManager:SmsManager = this.getSystemService(SmsManager::class.java)
             smsManager.sendTextMessage(message.phoneNumber, null, message.messageContent, null, null)

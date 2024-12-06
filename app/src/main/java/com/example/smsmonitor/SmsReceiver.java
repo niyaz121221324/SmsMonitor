@@ -12,26 +12,22 @@ import java.util.HashSet;
 import java.util.Objects;
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.HttpUrl;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class SmsReceiver extends BroadcastReceiver {
 
-    private final String _token;
     private final String _userName;
     private final OkHttpClient _httpClient;
     private final HashSet<String> _monitoredPhoneNumbers;
 
-    // Идентификатор чата на который
+    // Идентификатор чата на который будут отправляться сообщения
     private long _chatId;
 
-    // Количество сообщений получаемых с запроса getUpdates
-    private static final int OFFSET = 5;
-
-    public SmsReceiver(@NonNull String userName, String monitoredPhoneNumbersString, @NonNull Context context) {
-        _token = context.getString(R.string.telegram_bot_token);
+    public SmsReceiver(@NonNull String userName, String monitoredPhoneNumbersString) {
         _httpClient = new OkHttpClient();
         _userName = userName.trim();
 
@@ -63,7 +59,7 @@ public class SmsReceiver extends BroadcastReceiver {
             if (_chatId > 0) {
                 for (SmsMessage smsMessage : smsArray) {
                     if (_monitoredPhoneNumbers.contains(smsMessage.getOriginatingAddress())) {
-                        sendMessage(smsMessage);
+                        sendMessage(Message.from(smsMessage));
                     }
                 }
             } else {
@@ -75,7 +71,7 @@ public class SmsReceiver extends BroadcastReceiver {
     // Получаем идентификатор бота для отправки сообщений
     private void initializeChatId() {
         Request request = new Request.Builder()
-                .url(String.format("https://api.telegram.org/bot%s/getUpdates?offset=%s", _token, OFFSET))
+                .url(String.format("https://glider-dear-hog.ngrok-free.app/getChatId?userName=%s", _userName))
                 .build();
 
         _httpClient.newCall(request).enqueue(new Callback() {
@@ -89,86 +85,46 @@ public class SmsReceiver extends BroadcastReceiver {
                 setChatIdValue(response);
             }
         });
-    }
+     }
 
     private void setChatIdValue(@NonNull Response response) throws IOException {
-        if (response.isSuccessful() && response.body() != null) {
+        if (response.isSuccessful() && response.body() != null && _chatId == 0) {
             String responseBody = response.body().string();
 
             Gson gson = new Gson();
-            TelegramGetUpdatesResponse updates = gson.fromJson(responseBody, TelegramGetUpdatesResponse.class);
-
-            if (updates != null) {
-                if (updates.getResult() != null) {
-                    Result firstResult = getFirstResultByUserName(updates);
-
-                    if (firstResult != null && firstResult.getMessage() != null) {
-                        Chat chat = firstResult.getMessage().getChat();
-
-                        if (chat != null) {
-                            _chatId = chat.getId();
-                        }
-                    }
-                }
-            }
+            _chatId = gson.fromJson(responseBody, long.class);
         }
     }
 
-    private Result getFirstResultByUserName(TelegramGetUpdatesResponse updates) {
-        for (Result result : updates.getResult()) {
-            Message message = result.getMessage();
-
-            if (message != null && message.getChat() != null) {
-                Chat chat = message.getChat();
-                if (chat.getUsername() != null && chat.getUsername().equals(_userName)){
-                    return result;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private void sendMessage(SmsMessage smsMessage) {
+    private void sendMessage(Message smsMessage) {
         if (_chatId == 0) {
             return;
         }
 
-        String message = getMessage(smsMessage);
+        String url = String.format("https://glider-dear-hog.ngrok-free.app/sendMessage?chatId=%s", _chatId);
 
-        HttpUrl.Builder urlBuilder = Objects.requireNonNull(HttpUrl.parse(String.format("https://api.telegram.org/bot%s/sendMessage", _token)))
-                .newBuilder()
-                .addQueryParameter("chat_id", String.valueOf(_chatId))
-                .addQueryParameter("text", message);
+        MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+        String jsonBody = new Gson().toJson(smsMessage);
+
+        RequestBody body = RequestBody.create(jsonBody, JSON);
 
         Request request = new Request.Builder()
-                .url(urlBuilder.build().toString())
+                .url(url)
+                .post(body)
                 .build();
 
         _httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Request to sendMessage endpoint failed", e);
             }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (!response.isSuccessful()) {
-                    throw new IOException();
+                    throw new IOException("Unexpected response code: " + response.code());
                 }
             }
         });
-    }
-
-    private String getMessage(@NonNull SmsMessage smsMessage) {
-        String message = "";
-
-        if (smsMessage.getOriginatingAddress() != null && smsMessage.getMessageBody() != null) {
-            message = String.format("%s : От %s",
-                    smsMessage.getMessageBody(),
-                    smsMessage.getOriginatingAddress());
-        }
-
-        return message;
     }
 }
