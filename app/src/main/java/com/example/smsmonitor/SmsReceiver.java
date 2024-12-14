@@ -5,31 +5,23 @@ import android.content.Context;
 import android.content.Intent;
 import android.provider.Telephony;
 import android.telephony.SmsMessage;
+import android.util.Log;
 import androidx.annotation.NonNull;
-import com.google.gson.Gson;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Objects;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
 
 public class SmsReceiver extends BroadcastReceiver {
 
     private final String _userName;
-    private final OkHttpClient _httpClient;
     private final HashSet<String> _monitoredPhoneNumbers;
+    private final TelegramManager _telegramManager;
 
     // Идентификатор чата на который будут отправляться сообщения
     private long _chatId;
 
     public SmsReceiver(@NonNull String userName, String monitoredPhoneNumbersString) {
-        _httpClient = new OkHttpClient();
         _userName = userName.trim();
+        _telegramManager = new TelegramManager();
 
         // Получаем chat_id для отправки сообщений
         initializeChatId();
@@ -70,60 +62,33 @@ public class SmsReceiver extends BroadcastReceiver {
 
     // Получаем идентификатор бота для отправки сообщений
     private void initializeChatId() {
-        Request request = new Request.Builder()
-                .url(String.format("https://glider-dear-hog.ngrok-free.app/getChatId?userName=%s", _userName))
-                .build();
-
-        _httpClient.newCall(request).enqueue(new Callback() {
+        _telegramManager.getChatId(_userName, new TelegramManager.GetChatIdCallback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                throw new RuntimeException(e);
+            public void onSuccess(Long chatId) {
+                _chatId = chatId;
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                setChatIdValue(response);
+            public void onFailure(Throwable t) {
+                throw new RuntimeException(t);
             }
         });
      }
-
-    private void setChatIdValue(@NonNull Response response) throws IOException {
-        if (response.isSuccessful() && response.body() != null && _chatId == 0) {
-            String responseBody = response.body().string();
-
-            Gson gson = new Gson();
-            _chatId = gson.fromJson(responseBody, long.class);
-        }
-    }
 
     private void sendMessage(Message smsMessage) {
         if (_chatId == 0) {
             return;
         }
 
-        String url = String.format("https://glider-dear-hog.ngrok-free.app/sendMessage?chatId=%s", _chatId);
-
-        MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-        String jsonBody = new Gson().toJson(smsMessage);
-
-        RequestBody body = RequestBody.create(jsonBody, JSON);
-
-        Request request = new Request.Builder()
-                .url(url)
-                .post(body)
-                .build();
-
-        _httpClient.newCall(request).enqueue(new Callback() {
+        _telegramManager.sendMessage(_chatId, smsMessage, new TelegramManager.SendMessageCallback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                throw new RuntimeException("Request to sendMessage endpoint failed", e);
+            public void onSuccess(String response) {
+                Log.i("Telegram", "Message sent successfully");
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (!response.isSuccessful()) {
-                    throw new IOException("Unexpected response code: " + response.code());
-                }
+            public void onFailure(Throwable t) {
+                throw new RuntimeException(t);
             }
         });
     }

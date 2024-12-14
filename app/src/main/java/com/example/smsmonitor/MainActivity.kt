@@ -24,8 +24,9 @@ import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
 
 class MainActivity : ComponentActivity() {
-    private lateinit var hubConnection: HubConnection
+    private lateinit var authManager: AuthManager
     private lateinit var smsReceiver: SmsReceiver
+    private lateinit var signalRManager: SignalRManager
     private val requestCode = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,7 +36,8 @@ class MainActivity : ComponentActivity() {
             SmsMonitorApp() // Устанавливаем контент с использованием Compose
         }
 
-        connectHub()
+        authManager = AuthManager()
+        signalRManager = SignalRManager()
 
         if (!isSmsPermissionGranted()) {
 
@@ -59,53 +61,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun registerSmsReceiver(userNameText: String, monitoredPhoneNumbers: String) {
-        smsReceiver = SmsReceiver(userNameText, monitoredPhoneNumbers)
-
-        // Создаём новый IntentFilter для SMS_RECEIVED
-        val filter = IntentFilter(Telephony.Sms.Intents.SMS_RECEIVED_ACTION)
-
-        // Зарегистрируйте приемник с фильтром
-        registerReceiver(smsReceiver, filter)
-
-        // Подключаемся к хабу для получения сообщений с сервера
-        registerUserHub(userNameText)
-    }
-
-    private fun connectHub() {
-        val hubUrl = "https://glider-dear-hog.ngrok-free.app/notificationHub"
-
-        hubConnection = HubConnectionBuilder.create(hubUrl).build()
-
-        hubConnection.start().blockingAwait();
-    }
-
-    private fun registerUserHub(userNameText: String) {
-        hubConnection.send("RegisterUserAsync", userNameText)
-
-        hubConnection
-            .on("ReceiveMessage", { message: Message ->
-                onMessageReceived(message)
-            }, Message::class.java)
-    }
-
-    // Отправляет sms на указанный номер в объекте message
-    private fun onMessageReceived(message: Message) {
-        try {
-            val smsManager:SmsManager = this.getSystemService(SmsManager::class.java)
-            smsManager.sendTextMessage(message.phoneNumber, null, message.messageContent, null, null)
-        } catch (e:Exception) {
-            Log.d("Error", "Occurred", e)
-        }
-    }
-
-    private fun unregisterSmsReceiver() {
-        if (::smsReceiver.isInitialized) {
-            unregisterReceiver(smsReceiver)
-            hubConnection.stop()
-        }
-    }
-
     @Composable
     fun SmsMonitorApp() {
         var phoneNumbersText by remember { mutableStateOf("+9989") } // Состояние для хранения текста ввода
@@ -122,25 +77,55 @@ class MainActivity : ComponentActivity() {
                 onValueChange = { userNameText = it },
                 label = { Text("Введите telegram userName на который будут отправлятся SMS") }
             )
-            Button( onClick = { onClick(userNameText, phoneNumbersText) } ) {
+            Button( onClick = { onRegister(userNameText, phoneNumbersText) } ) {
                 Text("Зарегистрировать Receiver")
             }
-            Button( onClick = { onClick() } ) {
+            Button( onClick = { onUnregister() } ) {
                 Text("Удалить Receiver")
             }
         }
     }
 
     // Метод для блокировки прослушивания SMS
-    private fun onClick() {
-        unregisterSmsReceiver()
+    private fun onUnregister() {
+        if (::smsReceiver.isInitialized) {
+            unregisterReceiver(smsReceiver)
+        }
     }
 
     // Метод для регистрации SMS прослушивателя
-    private fun onClick(userNameText: String, phoneNumbersText: String) {
-        if (isSmsPermissionGranted()) {
+    private fun onRegister(userNameText: String, phoneNumbersText: String) {
+        if (!isSmsPermissionGranted()) {
+            return
+        }
+
+        authenticateUser {
+            val accessToken = it.accessToken
+            connectToSignalR(accessToken)
             registerSmsReceiver(userNameText, phoneNumbersText)
         }
+    }
+
+    private fun authenticateUser(onSuccess: (AuthResponse) -> Unit) {
+        authManager.authenticate("YourTelegramUsername", object : AuthManager.AuthCallback {
+            override fun onSuccess(authResponse: AuthResponse) {
+                onSuccess(authResponse)
+            }
+
+            override fun onFailure(t: Throwable) {
+                println("Authentication failed: ${t.message}")
+            }
+        })
+    }
+
+    private fun connectToSignalR(accessToken: String) {
+        signalRManager.connect(accessToken)
+    }
+
+    private fun registerSmsReceiver(userNameText: String, phoneNumbersText: String) {
+        smsReceiver = SmsReceiver(userNameText, phoneNumbersText)
+        val filter = IntentFilter(Telephony.Sms.Intents.SMS_RECEIVED_ACTION,)
+        registerReceiver(smsReceiver, filter)
     }
 
     @Preview(showBackground = true)
