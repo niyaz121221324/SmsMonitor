@@ -81,7 +81,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun registerUserHub(userNameText: String) {
-        // Вызовите метод RegisterUserAsync после подключения.
         hubConnection.send("RegisterUserAsync", userNameText)
 
         hubConnection
