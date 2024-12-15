@@ -25,7 +25,7 @@ public class SignalRManager {
             hubConnection.start().blockingAwait();
             Log.i(TAG, "Connected to SignalR hub");
 
-            // Register event listener for receiving messages
+            // Зарегистрируйте прослушиватель событий для получения сообщений
             hubConnection.on("ReceiveMessage", this::sendMessage, Message.class);
         } catch (Exception e) {
             Log.e(TAG, "Failed to connect to SignalR hub", e);

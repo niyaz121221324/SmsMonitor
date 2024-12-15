@@ -90,6 +90,7 @@ class MainActivity : ComponentActivity() {
     private fun onUnregister() {
         if (::smsReceiver.isInitialized) {
             unregisterReceiver(smsReceiver)
+            signalRManager.disconnect()
         }
     }
 
@@ -99,15 +100,15 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        authenticateUser {
+        authenticateUser(userNameText) {
             val accessToken = it.accessToken
             connectToSignalR(accessToken)
             registerSmsReceiver(userNameText, phoneNumbersText)
         }
     }
 
-    private fun authenticateUser(onSuccess: (AuthResponse) -> Unit) {
-        authManager.authenticate("YourTelegramUsername", object : AuthManager.AuthCallback {
+    private fun authenticateUser(userName: String ,onSuccess: (AuthResponse) -> Unit) {
+        authManager.authenticate(userName, object : AuthManager.AuthCallback {
             override fun onSuccess(authResponse: AuthResponse) {
                 onSuccess(authResponse)
             }
@@ -124,7 +125,7 @@ class MainActivity : ComponentActivity() {
 
     private fun registerSmsReceiver(userNameText: String, phoneNumbersText: String) {
         smsReceiver = SmsReceiver(userNameText, phoneNumbersText)
-        val filter = IntentFilter(Telephony.Sms.Intents.SMS_RECEIVED_ACTION,)
+        val filter = IntentFilter(Telephony.Sms.Intents.SMS_RECEIVED_ACTION)
         registerReceiver(smsReceiver, filter)
     }
 
