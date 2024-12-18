@@ -4,8 +4,6 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Telephony
-import android.telephony.SmsManager
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -20,8 +18,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.microsoft.signalr.HubConnection
-import com.microsoft.signalr.HubConnectionBuilder
 
 class MainActivity : ComponentActivity() {
     private lateinit var authManager: AuthManager
@@ -39,18 +35,12 @@ class MainActivity : ComponentActivity() {
         authManager = AuthManager()
         signalRManager = SignalRManager()
 
-        if (!isSmsPermissionGranted()) {
-
-            // Запрашиваем доступ к SMS
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(android.Manifest.permission.RECEIVE_SMS, android.Manifest.permission.SEND_SMS),
-                requestCode
-            )
+        if (!areSmsPermissionGranted()) {
+            requestPermission()
         }
     }
 
-    private fun isSmsPermissionGranted() : Boolean {
+    private fun areSmsPermissionGranted() : Boolean {
         val requiredPermissions = arrayOf(
             android.Manifest.permission.RECEIVE_SMS,
             android.Manifest.permission.SEND_SMS
@@ -59,6 +49,15 @@ class MainActivity : ComponentActivity() {
         return requiredPermissions.all { permission ->
             ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
         }
+    }
+
+    private fun requestPermission() {
+        val requiredPermissions = arrayOf(
+            android.Manifest.permission.RECEIVE_SMS,
+            android.Manifest.permission.SEND_SMS
+        )
+
+        ActivityCompat.requestPermissions(this, requiredPermissions, requestCode)
     }
 
     @Composable
@@ -96,7 +95,7 @@ class MainActivity : ComponentActivity() {
 
     // Метод для регистрации SMS прослушивателя
     private fun onRegister(userNameText: String, phoneNumbersText: String) {
-        if (!isSmsPermissionGranted()) {
+        if (!areSmsPermissionGranted()) {
             return
         }
 
