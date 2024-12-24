@@ -8,8 +8,8 @@ public class AuthResponse {
         return accessToken;
     }
 
-    public void setAccessToken(String accesToken) {
-        this.accessToken = accesToken;
+    public void setAccessToken(String accessToken) {
+        this.accessToken = accessToken;
     }
 
     public String getRefreshToken() {

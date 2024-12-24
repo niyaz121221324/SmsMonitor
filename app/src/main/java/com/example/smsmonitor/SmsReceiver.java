@@ -11,7 +11,7 @@ import java.util.HashSet;
 import java.util.Objects;
 
 public class SmsReceiver extends BroadcastReceiver {
-
+    private static final String TAG = "SmsReceiver";
     private final String _userName;
     private final HashSet<String> _monitoredPhoneNumbers;
     private final TelegramManager _telegramManager;
@@ -70,7 +70,7 @@ public class SmsReceiver extends BroadcastReceiver {
 
             @Override
             public void onFailure(Throwable t) {
-                throw new RuntimeException(t);
+                Log.e(TAG, "Failed to initialize chatId");
             }
         });
      }
@@ -83,12 +83,12 @@ public class SmsReceiver extends BroadcastReceiver {
         _telegramManager.sendMessage(_chatId, smsMessage, new TelegramManager.SendMessageCallback() {
             @Override
             public void onSuccess(String response) {
-                Log.i("Telegram", "Message sent successfully");
+                Log.i(TAG, "Message sent successfully");
             }
 
             @Override
             public void onFailure(Throwable t) {
-                throw new RuntimeException(t);
+                Log.e(TAG, "Failed to send message");
             }
         });
     }
