@@ -14,6 +14,7 @@ public class TelegramManager {
     }
 
     public void sendMessage(Long chatId, Message message, SendMessageCallback callback) {
+        message.setChatId(chatId);
         telegramService.sendMessage(chatId, message).enqueue(new Callback<String>() {
             @Override
             public void onResponse(@NonNull Call<String> call, @NonNull Response<String> response) {

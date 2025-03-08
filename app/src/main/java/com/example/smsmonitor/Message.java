@@ -5,6 +5,11 @@ import android.telephony.SmsMessage;
 public class Message {
 
     /**
+     * Идентификатор чата, куда будет отправлено сообщение.
+     */
+    private long chatId;
+
+    /**
      * Номер телефона, на который будет отправлено сообщение.
      */
     private String phoneNumber = "";
@@ -15,6 +20,11 @@ public class Message {
     private String messageContent = "";
 
     public Message() {
+    }
+
+    public Message(long chatId, String phoneNumber, String messageContent) {
+        this(phoneNumber, messageContent);
+        this.chatId = chatId;
     }
 
     public Message(String phoneNumber, String messageContent) {
@@ -36,6 +46,14 @@ public class Message {
 
     public void setMessageContent(String messageContent) {
         this.messageContent = messageContent;
+    }
+
+    public long getChatId() {
+        return chatId;
+    }
+
+    public void setChatId(long chatId) {
+        this.chatId = chatId;
     }
 
     public static Message from(SmsMessage smsMessage) {
